@@ -124,8 +124,8 @@ test.describe('Frontend pages', () => {
 
   test('Kiosk page loads (Public)', async ({ page }) => {
     await page.goto(`${BASE}/kiosk`);
-    // Wait for the specific branding text to ensure the component rendered
-    await expect(page.getByText('FaceGym', { exact: false })).toBeVisible({ timeout: 10000 });
+    // Use exact match to avoid strict mode violation with the footer
+    await expect(page.getByText('FaceGym', { exact: true })).toBeVisible({ timeout: 10000 });
     // Also verify the scanning hint exists (initial state)
     await expect(page.locator('.kiosk-root')).toBeVisible();
   });
