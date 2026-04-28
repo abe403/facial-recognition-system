@@ -44,6 +44,8 @@ def fresh_db():
     with db.get_db() as conn:
         conn.execute("DELETE FROM attendance")
         conn.execute("DELETE FROM members")
+        # Reset AUTOINCREMENT counter so next ID is GYM0001
+        conn.execute("DELETE FROM sqlite_sequence WHERE name='members'")
         conn.commit()
 
 

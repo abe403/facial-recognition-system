@@ -24,6 +24,7 @@ def fresh_db():
     with db.get_db() as conn:
         conn.execute("DELETE FROM attendance")
         conn.execute("DELETE FROM members")
+        conn.execute("DELETE FROM sqlite_sequence WHERE name='members'")
         conn.commit()
 
 
