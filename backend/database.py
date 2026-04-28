@@ -17,6 +17,10 @@ def get_db_path():
 def get_samples_dir():
     return os.environ.get("SAMPLES_DIR", "data/face_samples")
 
+# Backwards-compatible exports (for recognizer.py and older imports)
+DB_PATH = get_db_path()
+SAMPLES_DIR = get_samples_dir()
+
 
 def ensure_dirs():
     """Create required directories for the current config."""

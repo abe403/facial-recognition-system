@@ -12,7 +12,7 @@ import numpy as np
 import cv2 as cv
 from typing import Optional
 
-from database import SAMPLES_DIR, ensure_dirs
+from database import get_samples_dir, ensure_dirs
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +70,7 @@ def detect_face(image: np.ndarray) -> Optional[np.ndarray]:
 def save_face_sample(membership_id: str, face_roi: np.ndarray) -> str:
     """Save a grayscale face ROI to disk. Returns the file path."""
     ensure_dirs()
-    path = os.path.join(SAMPLES_DIR, f"{membership_id}.png")
+    path = os.path.join(get_samples_dir(), f"{membership_id}.png")
     cv.imwrite(path, face_roi)
     logger.info("Saved face sample: %s", path)
     return path
@@ -84,9 +84,10 @@ def train_model() -> list[str]:
     global _label_to_id, recognizer
 
     ensure_dirs()
+    samples_dir = get_samples_dir()
     images = [
-        os.path.join(SAMPLES_DIR, f)
-        for f in os.listdir(SAMPLES_DIR)
+        os.path.join(samples_dir, f)
+        for f in os.listdir(samples_dir)
         if f.lower().endswith((".png", ".jpg", ".jpeg"))
     ]
 
@@ -149,7 +150,7 @@ def recognize_face(face_roi: np.ndarray) -> tuple[Optional[str], float]:
 
 def delete_face_sample(membership_id: str) -> bool:
     """Remove a face sample file from disk."""
-    path = os.path.join(SAMPLES_DIR, f"{membership_id}.png")
+    path = os.path.join(get_samples_dir(), f"{membership_id}.png")
     if os.path.exists(path):
         os.remove(path)
         return True
