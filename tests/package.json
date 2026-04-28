@@ -1,0 +1,12 @@
+{
+  "name": "facegym-tests",
+  "version": "1.0.0",
+  "description": "E2E and API tests for FaceGym",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.45.0",
+    "typescript": "^5.0.0"
+  }
+}
