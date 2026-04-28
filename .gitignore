@@ -1,0 +1,45 @@
+# ── Python ───────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# ── Virtual environments ──────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── Data (persisted at runtime, not in source) ────────────────────
+backend/data/
+backend/face_samples/
+backend/members.db
+
+# ── Node ──────────────────────────────────────────────────────────
+node_modules/
+frontend/node_modules/
+tests/node_modules/
+
+# ── Angular build output ──────────────────────────────────────────
+frontend/dist/
+
+# ── Playwright ────────────────────────────────────────────────────
+tests/playwright-report/
+tests/test-results/
+
+# ── OS ────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# ── IDE ───────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.iml
