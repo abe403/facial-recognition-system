@@ -130,6 +130,11 @@ const RESULT_HOLD_MS = 6000;    // How long to show a result before resetting
     </div>
   `,
   styles: [`
+    /* ── Host ───────────────────────────────────────────────────────── */
+    :host {
+      display: block;
+    }
+
     /* ── Root ───────────────────────────────────────────────────────── */
     .kiosk-root {
       position: fixed;
