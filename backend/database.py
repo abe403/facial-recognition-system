@@ -3,23 +3,29 @@ Database layer — SQLite persistence for members and attendance.
 """
 import sqlite3
 import os
+import threading
 from datetime import datetime
 from contextlib import contextmanager
 from typing import Optional
 
 # ── Dynamic Config ──────────────────────────────────────────────
-# We use properties so that if os.environ changes (e.g. in tests),
-# the variables reflect the change immediately without a module reload.
 
 def get_db_path():
+    """Always returns the current DB_PATH from environment."""
     return os.environ.get("DB_PATH", "data/members.db")
 
 def get_samples_dir():
+    """Always returns the current SAMPLES_DIR from environment."""
     return os.environ.get("SAMPLES_DIR", "data/face_samples")
 
-# Backwards-compatible exports (for recognizer.py and older imports)
+# ⚠️ LEGACY CONSTANTS (Avoid using in new code — use getters instead)
+# These are frozen at import time and may not reflect env changes in tests.
 DB_PATH = get_db_path()
 SAMPLES_DIR = get_samples_dir()
+
+# ── Optimization Flag ──────────────────────────────────────────
+_initialized_paths: set[str] = set()
+_init_lock = threading.Lock()
 
 
 def ensure_dirs():
@@ -84,21 +90,31 @@ def _run_schema_ddl(conn: sqlite3.Connection):
 def get_db():
     """
     Yield a database connection with auto-close.
-    Self-initializes the schema on every connection to ensure tables exist.
+    Ensures schema exists for the target DB_PATH exactly once per process.
     """
     path = get_db_path()
     uri = path.startswith("file:")
     
-    # Ensure directory exists for file-based DBs
-    if not uri and os.path.dirname(path):
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        
+    # Check if we need to initialize this specific path
+    if path not in _initialized_paths:
+        with _init_lock:
+            if path not in _initialized_paths:
+                if not uri and os.path.dirname(path):
+                    os.makedirs(os.path.dirname(path), exist_ok=True)
+                
+                # Temporary connection to initialize
+                temp_conn = sqlite3.connect(path, uri=uri)
+                try:
+                    _run_schema_ddl(temp_conn)
+                finally:
+                    temp_conn.close()
+                
+                _initialized_paths.add(path)
+                
+    # Standard connection for the caller
     conn = sqlite3.connect(path, uri=uri)
     conn.row_factory = sqlite3.Row
-    
     try:
-        # Guarantee schema exists before yielding
-        _run_schema_ddl(conn)
         yield conn
     finally:
         conn.close()
@@ -107,7 +123,6 @@ def get_db():
 # ── Member CRUD ─────────────────────────────────────────────────
 
 def create_member(name: str, expiration_date: str) -> dict:
-    """Insert a member — the trigger auto-assigns the GYM-prefixed membership_id."""
     with get_db() as conn:
         cursor = conn.execute(
             "INSERT INTO members (name, expiration_date) VALUES (?, ?)",
