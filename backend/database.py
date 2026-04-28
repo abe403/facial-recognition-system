@@ -13,8 +13,11 @@ SAMPLES_DIR = os.environ.get("SAMPLES_DIR", "data/face_samples")
 
 def ensure_dirs():
     """Create required directories."""
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    os.makedirs(SAMPLES_DIR, exist_ok=True)
+    db_dir = os.path.dirname(DB_PATH)
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
+    if SAMPLES_DIR:
+        os.makedirs(SAMPLES_DIR, exist_ok=True)
 
 
 def init_db():
