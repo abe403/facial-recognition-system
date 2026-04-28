@@ -2,19 +2,20 @@ import { Component, OnInit, inject } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { filter } from 'rxjs/operators';
+import { AuthService } from './core/auth/auth.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [RouterOutlet, RouterLink, RouterLinkActive, CommonModule],
   template: `
-    <!-- ── KIOSK LAYOUT: Full screen, no shell ── -->
-    <ng-container *ngIf="isKiosk">
+    <!-- ── FULL SCREEN LAYOUT: No shell for Kiosk or Login ── -->
+    <ng-container *ngIf="isShellHidden">
       <router-outlet></router-outlet>
     </ng-container>
 
     <!-- ── DASHBOARD LAYOUT: Sidebar + content ── -->
-    <ng-container *ngIf="!isKiosk">
+    <ng-container *ngIf="!isShellHidden">
       <nav class="sidebar">
         <div class="logo">
           <span class="logo-icon">🏋️</span>
@@ -49,6 +50,11 @@ import { filter } from 'rxjs/operators';
         </div>
 
         <div class="sidebar-footer">
+          <button (click)="logout()" class="logout-btn">
+            <span class="icon">🚪</span>
+            <span>Logout</span>
+          </button>
+          
           <div class="status-indicator">
             <span class="dot"></span>
             <span>System Online</span>
@@ -67,11 +73,6 @@ import { filter } from 'rxjs/operators';
       display: flex;
       height: 100vh;
       overflow: hidden;
-    }
-
-    /* ── Kiosk full-screen ───────────────────────── */
-    ng-container:first-child {
-      display: contents;
     }
 
     /* ── Sidebar ─────────────────────────────────── */
@@ -165,7 +166,28 @@ import { filter } from 'rxjs/operators';
 
     .sidebar-footer {
       margin-top: auto;
-      padding-top: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .logout-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      background: transparent;
+      border: 1px solid rgba(255, 65, 54, 0.2);
+      color: #ff4d4d;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+
+    .logout-btn:hover {
+      background: rgba(255, 65, 54, 0.1);
+      border-color: #ff4d4d;
     }
 
     .status-indicator {
@@ -188,16 +210,24 @@ import { filter } from 'rxjs/operators';
 })
 export class AppComponent implements OnInit {
   private router = inject(Router);
-  isKiosk = false;
+  private authService = inject(AuthService);
+  isShellHidden = false;
 
   ngOnInit() {
     this.router.events
       .pipe(filter(e => e instanceof NavigationEnd))
       .subscribe((e: NavigationEnd) => {
-        this.isKiosk = e.urlAfterRedirects.startsWith('/kiosk');
+        this.updateShellState(e.urlAfterRedirects);
       });
 
-    // Check initial URL (e.g. direct browser navigation to /kiosk)
-    this.isKiosk = this.router.url.startsWith('/kiosk');
+    this.updateShellState(this.router.url);
+  }
+
+  updateShellState(url: string) {
+    this.isShellHidden = url.startsWith('/kiosk') || url.startsWith('/login');
+  }
+
+  logout() {
+    this.authService.logout();
   }
 }

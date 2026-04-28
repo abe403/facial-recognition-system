@@ -1,28 +1,19 @@
 """
 FaceGym API — FastAPI backend for the facial recognition access control system.
-
-Endpoints:
-  POST   /api/members              → Register a new member (ID is auto-assigned)
-  GET    /api/members              → List all members
-  GET    /api/members/{id}         → Get a single member
-  PUT    /api/members/{id}         → Update member data
-  DELETE /api/members/{id}         → Delete a member
-  POST   /api/members/{id}/face    → Upload/update face sample
-  POST   /api/recognize            → Recognize a face and check access
-  GET    /api/attendance           → Get attendance log
-  GET    /api/stats                → Dashboard statistics
 """
 import logging
 import os
 from datetime import datetime, timedelta
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Request, status
+from fastapi import FastAPI, HTTPException, Request, status, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.security import OAuth2PasswordRequestForm
 
 import database as db
 import recognizer as rec
+import security
 from models import (
     MemberCreate,
     MemberUpdate,
@@ -41,8 +32,15 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Initialize DB and train model on startup."""
+    """Initialize DB, create default admin, and train model on startup."""
     db.init_db()
+    
+    # Create default admin if none exists
+    if not db.get_admin("admin"):
+        hashed = security.get_password_hash("admin123")
+        db.create_admin("admin", hashed)
+        logger.info("Default admin user created (admin / admin123)")
+    
     rec.train_model()
     logger.info("FaceGym API ready")
     yield
@@ -53,7 +51,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="FaceGym API",
     description="Facial Recognition Access Control System",
-    version="2.0.0",
+    version="2.1.0",
     lifespan=lifespan,
 )
 
@@ -87,11 +85,27 @@ def _to_response(member: dict) -> MemberResponse:
     return MemberResponse(**member, has_face_sample=os.path.exists(face_path))
 
 
+# ── Authentication ────────────────────────────────────────────────
+
+@app.post("/api/auth/login")
+async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    user = db.get_admin(form_data.username)
+    if not user or not security.verify_password(form_data.password, user["hashed_password"]):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    access_token = security.create_access_token(data={"sub": user["username"]})
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
 # ── Members CRUD ──────────────────────────────────────────────────
 
 @app.post("/api/members", response_model=MemberResponse, status_code=status.HTTP_201_CREATED)
-def register_member(body: MemberCreate):
-    """Register a new gym member. Membership ID is auto-assigned (GYM0001, GYM0002…)."""
+def register_member(body: MemberCreate, current_admin: str = Depends(security.get_current_admin)):
+    """Register a new gym member."""
     try:
         exp = datetime.strptime(body.expiration_date, "%Y-%m-%d").date()
         if exp < datetime.today().date():
@@ -104,12 +118,12 @@ def register_member(body: MemberCreate):
 
 
 @app.get("/api/members", response_model=list[MemberResponse])
-def list_members():
+def list_members(current_admin: str = Depends(security.get_current_admin)):
     return [_to_response(m) for m in db.get_all_members()]
 
 
 @app.get("/api/members/{membership_id}", response_model=MemberResponse)
-def get_member(membership_id: str):
+def get_member(membership_id: str, current_admin: str = Depends(security.get_current_admin)):
     member = db.get_member(membership_id)
     if not member:
         raise HTTPException(404, "Member not found")
@@ -117,7 +131,7 @@ def get_member(membership_id: str):
 
 
 @app.put("/api/members/{membership_id}", response_model=MemberResponse)
-def update_member(membership_id: str, body: MemberUpdate):
+def update_member(membership_id: str, body: MemberUpdate, current_admin: str = Depends(security.get_current_admin)):
     existing = db.get_member(membership_id)
     if not existing:
         raise HTTPException(404, "Member not found")
@@ -129,7 +143,7 @@ def update_member(membership_id: str, body: MemberUpdate):
 
 
 @app.delete("/api/members/{membership_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_member(membership_id: str):
+def delete_member(membership_id: str, current_admin: str = Depends(security.get_current_admin)):
     if not db.delete_member(membership_id):
         raise HTTPException(404, "Member not found")
     rec.delete_face_sample(membership_id)
@@ -139,7 +153,7 @@ def delete_member(membership_id: str):
 # ── Face Sample Upload ────────────────────────────────────────────
 
 @app.post("/api/members/{membership_id}/face", response_model=MemberResponse)
-def upload_face(membership_id: str, body: FaceImage):
+def upload_face(membership_id: str, body: FaceImage, current_admin: str = Depends(security.get_current_admin)):
     member = db.get_member(membership_id)
     if not member:
         raise HTTPException(404, "Member not found")
@@ -161,7 +175,7 @@ def upload_face(membership_id: str, body: FaceImage):
     return _to_response(member)
 
 
-# ── Face Recognition ──────────────────────────────────────────────
+# ── Face Recognition (PUBLIC) ─────────────────────────────────────
 
 @app.post("/api/recognize", response_model=RecognitionResult)
 def recognize(body: FaceImage):
@@ -228,14 +242,14 @@ def recognize(body: FaceImage):
 # ── Attendance ────────────────────────────────────────────────────
 
 @app.get("/api/attendance", response_model=list[AttendanceRecord])
-def get_attendance():
+def get_attendance(current_admin: str = Depends(security.get_current_admin)):
     return db.get_attendance(limit=50)
 
 
 # ── Dashboard Stats ───────────────────────────────────────────────
 
 @app.get("/api/stats", response_model=StatsResponse)
-def get_stats():
+def get_stats(current_admin: str = Depends(security.get_current_admin)):
     members = db.get_all_members()
     today = datetime.today().date()
     week_ago = today - timedelta(days=7)

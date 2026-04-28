@@ -1,0 +1,58 @@
+<div class="login-container">
+  <div class="glass-card login-card">
+    <div class="header">
+      <div class="logo">
+        <i class="fas fa-dumbbell"></i>
+      </div>
+      <h1>FaceGym Access</h1>
+      <p>Administrator Login</p>
+    </div>
+
+    <form (ngSubmit)="onSubmit()" #loginForm="ngForm">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <div class="input-wrapper">
+          <i class="fas fa-user"></i>
+          <input 
+            type="text" 
+            id="username" 
+            name="username" 
+            [(ngModel)]="username" 
+            required 
+            placeholder="Enter username"
+            autocomplete="username"
+          >
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <div class="input-wrapper">
+          <i class="fas fa-lock"></i>
+          <input 
+            type="password" 
+            id="password" 
+            name="password" 
+            [(ngModel)]="password" 
+            required 
+            placeholder="Enter password"
+            autocomplete="current-password"
+          >
+        </div>
+      </div>
+
+      <div *ngIf="error()" class="error-msg">
+        <i class="fas fa-exclamation-circle"></i> {{ error() }}
+      </div>
+
+      <button type="submit" class="login-btn" [disabled]="!loginForm.valid || isLoading()">
+        <span *ngIf="!isLoading()">Sign In</span>
+        <span *ngIf="isLoading()" class="loader"></span>
+      </button>
+    </form>
+
+    <div class="footer">
+      <p>Secure administrative access only</p>
+    </div>
+  </div>
+</div>

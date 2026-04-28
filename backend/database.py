@@ -83,6 +83,12 @@ def _run_schema_ddl(conn: sqlite3.Connection):
             FOREIGN KEY (member_number) REFERENCES members(member_number)
         )
     """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS admins (
+            username        TEXT PRIMARY KEY,
+            hashed_password TEXT NOT NULL
+        )
+    """)
     conn.commit()
 
 
@@ -205,3 +211,22 @@ def get_attendance(limit: int = 50) -> list[dict]:
             "SELECT * FROM attendance ORDER BY id DESC LIMIT ?", (limit,)
         ).fetchall()
     return [dict(r) for r in rows]
+
+
+# ── Admin CRUD ──────────────────────────────────────────────────
+
+def get_admin(username: str) -> Optional[dict]:
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT * FROM admins WHERE username = ?", (username,)
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def create_admin(username: str, hashed_password: str):
+    with get_db() as conn:
+        conn.execute(
+            "INSERT OR IGNORE INTO admins (username, hashed_password) VALUES (?, ?)",
+            (username, hashed_password),
+        )
+        conn.commit()
