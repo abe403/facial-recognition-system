@@ -2,7 +2,7 @@
 import os
 import pytest
 
-os.environ["DB_PATH"] = ":memory:"
+os.environ["DB_PATH"] = "file:memdb_db?mode=memory&cache=shared"
 os.environ["SAMPLES_DIR"] = "/tmp/facegym_test_samples"
 
 import sys

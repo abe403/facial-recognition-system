@@ -14,7 +14,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 # Point the DB to a temp in-memory location so tests never touch real data
-os.environ["DB_PATH"] = ":memory:"
+os.environ["DB_PATH"] = "file:memdb_api?mode=memory&cache=shared"
 os.environ["SAMPLES_DIR"] = "/tmp/facegym_test_samples"
 
 # Import app after env vars are set

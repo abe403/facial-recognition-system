@@ -59,7 +59,8 @@ def init_db():
 @contextmanager
 def get_db():
     """Yield a database connection with auto-close."""
-    conn = sqlite3.connect(DB_PATH)
+    uri = DB_PATH.startswith("file:")
+    conn = sqlite3.connect(DB_PATH, uri=uri)
     conn.row_factory = sqlite3.Row
     try:
         yield conn
