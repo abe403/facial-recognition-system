@@ -226,7 +226,7 @@ def get_admin(username: str) -> Optional[dict]:
 def create_admin(username: str, hashed_password: str):
     with get_db() as conn:
         conn.execute(
-            "INSERT OR IGNORE INTO admins (username, hashed_password) VALUES (?, ?)",
+            "INSERT OR REPLACE INTO admins (username, hashed_password) VALUES (?, ?)",
             (username, hashed_password),
         )
         conn.commit()

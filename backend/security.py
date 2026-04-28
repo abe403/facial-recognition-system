@@ -15,7 +15,7 @@ SECRET_KEY = os.environ.get("SECRET_KEY", "super-secret-gym-key-change-me-in-pro
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 1 day
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=10)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
 
 # ── Hashing ──────────────────────────────────────────────────────
