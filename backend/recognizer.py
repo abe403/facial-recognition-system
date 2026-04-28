@@ -51,17 +51,26 @@ def decode_base64_image(b64_string: str) -> np.ndarray:
 
 def detect_face(image: np.ndarray) -> Optional[np.ndarray]:
     """
-    Detect a single face in the image and return the grayscale ROI.
-    Returns None if no face or multiple faces detected.
+    Detect the most prominent face in the image and return the grayscale ROI.
+    Returns None if no faces are detected.
     """
     gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    
+    # Increase minNeighbors slightly to filter more false positives
     faces = face_cascade.detectMultiScale(
-        gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30)
+        gray, scaleFactor=1.1, minNeighbors=6, minSize=(50, 50)
     )
 
-    if len(faces) != 1:
-        logger.info("Expected 1 face, found %d", len(faces))
+    if len(faces) == 0:
+        logger.info("No faces detected in image")
         return None
+
+    # If multiple faces are found, pick the largest one (likely the user)
+    # faces is a list of (x, y, w, h)
+    if len(faces) > 1:
+        logger.info("Found %d potential faces, selecting the largest area", len(faces))
+        # Sort by area (w * h) descending
+        faces = sorted(faces, key=lambda f: f[2] * f[3], reverse=True)
 
     x, y, w, h = faces[0]
     return gray[y : y + h, x : x + w]
