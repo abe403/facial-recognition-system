@@ -59,7 +59,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: frontend
-        run: npm ci
+        run: npm install
 
       - name: Build Angular app
         working-directory: frontend
@@ -127,7 +127,7 @@ jobs:
       - name: Install Playwright
         working-directory: tests
         run: |
-          npm ci
+          npm install
           npx playwright install --with-deps chromium
 
       - name: Run Playwright tests
