@@ -23,12 +23,23 @@ from main import app
 import database as db
 
 
+import sqlite3
+
 # ── Fixtures ──────────────────────────────────────────────────────
+
+@pytest.fixture(scope="session", autouse=True)
+def setup_shared_db():
+    """Initialize schema once and keep the shared in-memory DB alive."""
+    db.init_db()
+    # Keep one connection open so the shared cache persists
+    conn = sqlite3.connect(os.environ["DB_PATH"], uri=True)
+    yield conn
+    conn.close()
+
 
 @pytest.fixture(autouse=True)
 def fresh_db():
-    """Re-initialize the database before every test for isolation."""
-    db.init_db()
+    """Clear data between tests for isolation."""
     yield
     # Cleanup: drop all data between tests
     with db.get_db() as conn:

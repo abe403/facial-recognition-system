@@ -8,11 +8,19 @@ os.environ["SAMPLES_DIR"] = "/tmp/facegym_test_samples"
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import database as db
+import sqlite3
+
+
+@pytest.fixture(scope="session", autouse=True)
+def setup_shared_db():
+    db.init_db()
+    conn = sqlite3.connect(os.environ["DB_PATH"], uri=True)
+    yield conn
+    conn.close()
 
 
 @pytest.fixture(autouse=True)
 def fresh_db():
-    db.init_db()
     yield
     with db.get_db() as conn:
         conn.execute("DELETE FROM attendance")

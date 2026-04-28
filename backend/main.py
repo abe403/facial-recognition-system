@@ -36,6 +36,9 @@ from models import (
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Ensure database is initialized as soon as module is loaded
+db.init_db()
+
 
 # ── Lifespan ─────────────────────────────────────────────────────
 
