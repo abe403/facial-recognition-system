@@ -78,6 +78,13 @@ app.add_middleware(
 )
 
 
+# ── Health Check (PUBLIC) ─────────────────────────────────────────
+
+@app.get("/api/health")
+def health_check():
+    return {"status": "ok", "timestamp": datetime.utcnow().isoformat()}
+
+
 # ── Helpers ───────────────────────────────────────────────────────
 
 def _to_response(member: dict) -> MemberResponse:
