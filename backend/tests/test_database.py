@@ -13,7 +13,6 @@ import sqlite3
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_shared_db():
-    db.init_db()
     conn = sqlite3.connect(os.environ["DB_PATH"], uri=True)
     yield conn
     conn.close()

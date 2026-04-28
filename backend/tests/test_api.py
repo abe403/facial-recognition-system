@@ -29,8 +29,7 @@ import sqlite3
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_shared_db():
-    """Initialize schema once and keep the shared in-memory DB alive."""
-    db.init_db()
+    """Keep the shared in-memory DB alive."""
     # Keep one connection open so the shared cache persists
     conn = sqlite3.connect(os.environ["DB_PATH"], uri=True)
     yield conn

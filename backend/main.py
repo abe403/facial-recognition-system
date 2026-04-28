@@ -36,9 +36,6 @@ from models import (
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Ensure database is initialized as soon as module is loaded
-db.init_db()
-
 
 # ── Lifespan ─────────────────────────────────────────────────────
 
@@ -86,7 +83,7 @@ app.add_middleware(
 # ── Helpers ───────────────────────────────────────────────────────
 
 def _to_response(member: dict) -> MemberResponse:
-    face_path = os.path.join(db.SAMPLES_DIR, f"{member['membership_id']}.png")
+    face_path = os.path.join(db.get_samples_dir(), f"{member['membership_id']}.png")
     return MemberResponse(**member, has_face_sample=os.path.exists(face_path))
 
 
