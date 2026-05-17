@@ -14,6 +14,9 @@ from fastapi.security import OAuth2PasswordRequestForm
 import database as db
 import recognizer as rec
 import security
+import pos_integration
+import prophet_model
+from fastapi.middleware.wsgi import WSGIMiddleware
 from models import (
     MemberCreate,
     MemberUpdate,
@@ -226,6 +229,14 @@ def recognize(body: FaceImage):
     if access_granted:
         db.log_attendance(membership_id, member["name"])
 
+    # Generate POS XML Integration Receipt
+    pos_integration.export_pos_xml_receipt(
+        member_name=member["name"],
+        membership_id=membership_id,
+        access_granted=access_granted,
+        confidence=confidence
+    )
+
     days_left = (exp_date - today).days
     if access_granted and days_left <= 7:
         msg = f"Welcome, {member['name']}! ⚠️ Membership expires in {days_left} day{'s' if days_left != 1 else ''}."
@@ -280,3 +291,30 @@ def get_stats(current_admin: str = Depends(security.get_current_admin)):
         entries_today=entries_today,
         entries_this_week=entries_week,
     )
+
+# ── Forecast (Prophet ML) ─────────────────────────────────────────
+
+@app.get("/api/forecast")
+def get_forecast(days: int = 7, current_admin: str = Depends(security.get_current_admin)):
+    """Predicts gym attendance for the next N days using Facebook Prophet."""
+    forecast = prophet_model.forecast_attendance(days_ahead=days)
+    return {"forecast": forecast, "days_ahead": days}
+
+# ── Django Admin Mounting ─────────────────────────────────────────
+try:
+    import os
+    import django
+    from django.core.wsgi import get_wsgi_application
+    
+    # Set the Django settings module
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "facegym_django.settings")
+    # Only setup if settings module can be found (prevents crash if project isn't generated yet)
+    if os.path.exists(os.path.join(os.path.dirname(__file__), "facegym_django", "settings.py")):
+        django.setup()
+        django_app = get_wsgi_application()
+        app.mount("/admin", WSGIMiddleware(django_app))
+        logger.info("Django Admin Dashboard mounted asynchronously at /admin")
+except ImportError:
+    logger.warning("Django is not fully installed. Skipping admin dashboard mount.")
+except Exception as e:
+    logger.warning(f"Django project 'facegym_django' not found or not configured: {e}")
